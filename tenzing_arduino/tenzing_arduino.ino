@@ -14,7 +14,12 @@ AF_DCMotor motor_S(3);
 #define forwardButton 4
 #define backButton 5
 
+int driveSpeed = 120;
+
 int sensorVal = 0;
+int sensorThreshold = 500;
+int sensorTol = 50;
+
 
 int autoVal = 0;
 int upVal = 0;
@@ -22,7 +27,9 @@ int downVal = 0;
 int forwardVal = 0;
 int backVal = 0;
 
-bool autoFlag = false;
+bool autoFlag = true;
+
+bool debug = false;
 
 void setup() {
   Serial.begin(9600);           // set up Serial library at 9600 bps
@@ -47,45 +54,101 @@ int i;
 // Test the DC motor, stepper and servo ALL AT ONCE!
 void loop() {
 
+//  Read Values
   sensorVal = analogRead(sensorPin);
-  Serial.print("Sensor value is: ");     
-  Serial.println(sensorVal);
-
-  autoVal = analogRead(autoPin);
-  Serial.print("Auto value is: ");     
-  Serial.println(autoVal);
-
+  autoVal = analogRead(autoButton);
   upVal = analogRead(upButton);
-  Serial.print("Up value is: ");     
-  Serial.println(upVal);
-
   downVal = analogRead(downButton);
-  Serial.print("Down value is: ");     
-  Serial.println(downVal);
-
   forwardVal = analogRead(forwardButton);
-  Serial.print("Forward value is: ");     
-  Serial.println(forwardVal);
-
   backVal = analogRead(backButton);
-  Serial.print("Back value is: ");     
-  Serial.println(backVal);
 
-  if (autoFlag){
-    
+  
+//Optional Print Values
+  if (debug){
+ 
+    Serial.print("Auto value is: ");     
+    Serial.println(autoVal);
+  
+    Serial.print("Up value is: ");     
+    Serial.println(upVal);
+  
+    Serial.print("Down value is: ");     
+    Serial.println(downVal);
+  
+    Serial.print("Forward value is: ");     
+    Serial.println(forwardVal);
+  
+    Serial.print("Back value is: ");     
+    Serial.println(backVal);
   }
   
-  motor_R.run(FORWARD);
-  motor_L.run(FORWARD);
-  motor_S.run(FORWARD);
-  motor_S.setSpeed(255);
-//  for (i=0; i<255; i++) {
-//    motor_R.setSpeed(i);
-//    motor_L.setSpeed(i);
-////    motor_S.setSpeed(i);  
-//    delay(3);
-// }
- 
+// Set or unset autoFlag
+// 800 is a misc. button threshold
+  if (autoVal > 800){
+    if (autoFlag){
+      autoFlag = false;
+    }
+    else{
+      autoFlag = true;
+    }
+  }
+
+//Autonomous control
+  if (autoFlag){
+    Serial.print("Sensor value is: ");     
+    Serial.println(sensorVal);
+
+    if (sensorVal < sensorThreshold - sensorTol){
+      motor_R.run(BACKWARD);
+      motor_L.run(BACKWARD);
+      motor_R.setSpeed(driveSpeed);
+      motor_L.setSpeed(driveSpeed);
+      motor_S.setSpeed(0);
+    }
+    else if (sensorVal > sensorThreshold + sensorTol) {
+      motor_R.run(FORWARD);
+      motor_L.run(FORWARD);
+      motor_R.setSpeed(driveSpeed);
+      motor_L.setSpeed(driveSpeed);
+      motor_S.setSpeed(0);
+    }
+    else{
+      motor_R.setSpeed(0);
+      motor_L.setSpeed(0);
+      motor_S.run(FORWARD);
+      motor_S.setSpeed(255);
+    }
+    
+  }
+
+//Manual Control
+  else{
+    if (upVal > 800){
+      motor_S.run(FORWARD);
+      motor_S.setSpeed(255);
+    }
+    else if (downVal > 800){
+      motor_S.run(BACKWARD);
+      motor_S.setSpeed(255);  
+    }
+    else if (forwardVal > 800){
+      motor_R.run(FORWARD);
+      motor_L.run(FORWARD);
+      motor_R.setSpeed(driveSpeed);
+      motor_L.setSpeed(driveSpeed);
+    }
+    else if (backVal > 800){
+      motor_R.run(BACKWARD);
+      motor_L.run(BACKWARD);
+      motor_R.setSpeed(driveSpeed);
+      motor_L.setSpeed(driveSpeed);
+    }
+    else{
+      motor_R.setSpeed(0);
+      motor_L.setSpeed(0);
+      motor_S.setSpeed(0);
+    }
+  }
  
  }
-}
+
